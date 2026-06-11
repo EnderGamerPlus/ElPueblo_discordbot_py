@@ -1,13 +1,5 @@
 import discord
 from discord.ext import commands
-import time
-
-# { user_id: {"images": int, "messages": [timestamps]} }
-user_activity = {}
-
-IMAGE_THRESHOLD = 3       # Imágenes en un solo mensaje
-MSG_THRESHOLD = 5         # Mensajes en poco tiempo
-MSG_WINDOW_SECONDS = 5    # Ventana de tiempo para contar mensajes
 
 
 class AntiHack(commands.Cog, name="antihack"):
@@ -21,8 +13,7 @@ class AntiHack(commands.Cog, name="antihack"):
         try:
             await member.send(
                 f"⚠️ **Has sido baneado automáticamente de {message.guild.name}**\n\n"
-                f"**Motivo:** Cuenta posiblemente vulnerada\n\n"
-                f"**Detección:** {razon}\n\n"
+                f"**Motivo:** {razon}\n\n"
                 f"Si tu cuenta fue hackeada:\n"
                 f"• Cambia tu contraseña de Discord\n"
                 f"• Activa el 2FA en Ajustes → Mi cuenta\n"
@@ -62,8 +53,6 @@ class AntiHack(commands.Cog, name="antihack"):
                 )
             await log_channel.send(embed=embed)
 
-        # Limpiar datos del usuario
-        user_activity.pop(member.id, None)
         self.bot.logger.info(f"Baneado: {member} | Motivo: {razon}")
 
     @commands.Cog.listener()
@@ -84,33 +73,8 @@ class AntiHack(commands.Cog, name="antihack"):
         if member.guild_permissions.administrator or member.guild_permissions.ban_members:
             return
 
-        uid = member.id
-        if uid not in user_activity:
-            user_activity[uid] = {"images": 0, "messages": []}
-
-        now = time.time()
-
-        # ── DETECCIÓN 1: @everyone o @here ──────────────────────────
-        contenido = message.content.lower()
-        if "@everyone" in contenido or "@here" in contenido:
-            await self.banear(member, message, "Uso de @everyone/@here en canal protegido")
-            return
-
-        # ── DETECCIÓN 2: Más de 3 imágenes en un mensaje ────────────
-        if len(message.attachments) > IMAGE_THRESHOLD:
-            await self.banear(member, message, f"Más de {IMAGE_THRESHOLD} imágenes en un solo mensaje")
-            return
-
-        # ── DETECCIÓN 3: Muchos mensajes seguidos ───────────────────
-        user_activity[uid]["messages"].append(now)
-        # Limpiar mensajes fuera de la ventana de tiempo
-        user_activity[uid]["messages"] = [
-            t for t in user_activity[uid]["messages"]
-            if now - t <= MSG_WINDOW_SECONDS
-        ]
-        if len(user_activity[uid]["messages"]) >= MSG_THRESHOLD:
-            await self.banear(member, message, f"Spam: {MSG_THRESHOLD}+ mensajes en {MSG_WINDOW_SECONDS} segundos")
-            return
+        # ── DETECCIÓN: Cualquier mensaje en el canal honeypot ───────
+        await self.banear(member, message, "Posible cuenta comprometida")
 
 
 async def setup(bot) -> None:
