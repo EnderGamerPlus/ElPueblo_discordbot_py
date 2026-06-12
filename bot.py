@@ -21,6 +21,9 @@ from dotenv import load_dotenv
 
 from database import DatabaseManager
 
+from aiohttp import web
+import asyncio
+
 load_dotenv()
 
 """	
@@ -290,5 +293,21 @@ class DiscordBot(commands.Bot):
             raise error
 
 
+async def run_webserver():
+    async def handle(request):
+        return web.Response(text="OK")
+    app = web.Application()
+    app.router.add_get("/", handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
+
 bot = DiscordBot()
-bot.run(os.getenv("TOKEN"))
+
+
+async def main():
+    await run_webserver()
+    await bot.start(os.getenv("TOKEN"))
+
+asyncio.run(main())
