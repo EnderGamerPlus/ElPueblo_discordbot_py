@@ -55,26 +55,26 @@ class AntiHack(commands.Cog, name="antihack"):
 
         self.bot.logger.info(f"Baneado: {member} | Motivo: {razon}")
 
-    @commands.Cog.listener()
     @commands.hybrid_command(
         name="honeypotmsg",
         description="Envía el mensaje de advertencia del honeypot en el canal actual."
     )
-@commands.has_permissions(administrator=True)
-async def honeypotmsg(self, context: commands.Context) -> None:
-    embed = discord.Embed(
-        title="⚠️ CANAL DE SEGURIDAD — NO ESCRIBAS AQUÍ",
-        description=(
-            "Este canal está monitoreado por un sistema automático de detección de cuentas comprometidas.\n\n"
-            "**Cualquier mensaje enviado aquí resultará en un ban automático e inmediato.**\n\n"
-            "Este sistema existe para proteger el servidor de cuentas hackeadas que envían spam malicioso. "
-            "Si ves este canal, simplemente ignóralo.\n\n"
-            "Si fuiste baneado por error, contacta a un administrador."
-        ),
-        color=discord.Color.yellow()
-    )
-    await context.send(embed=embed)
+    @commands.has_permissions(administrator=True)
+    async def honeypotmsg(self, context: commands.Context) -> None:
+        embed = discord.Embed(
+            title="⚠️ CANAL DE SEGURIDAD — NO ESCRIBAS AQUÍ",
+            description=(
+                "Este canal está monitoreado por un sistema automático de detección de cuentas comprometidas.\n\n"
+                "**Cualquier mensaje enviado aquí resultará en un ban automático e inmediato.**\n\n"
+                "Este sistema existe para proteger el servidor de cuentas hackeadas que envían spam malicioso. "
+                "Si ves este canal, simplemente ignóralo.\n\n"
+                "Si fuiste baneado por error, contacta a un administrador."
+            ),
+            color=discord.Color.yellow()
+        )
+        await context.send(embed=embed)
 
+    @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         # Ignorar bots y DMs
         if message.author.bot or not message.guild:
