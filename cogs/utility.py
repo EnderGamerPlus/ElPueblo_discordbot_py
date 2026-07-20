@@ -6,6 +6,7 @@ USUARIOS_DM = [
     473316504239210507,
     1006400692551958670,
     410909681608032266,
+    975492670543765584,
 ]
 
 GIF_URL = "https://klipy.com/gifs/1a-lex-luthor"
@@ -31,9 +32,11 @@ class Utility(commands.Cog, name="utility"):
             try:
                 user = await self.bot.fetch_user(user_id)
                 await user.send(f"1a\n{GIF_URL}")
-                self.bot.logger.info(f"DM enviado a {user} a las {ahora.strftime('%H:%M')} GMT-4")
+                self.bot.logger.info(
+                    f"DM enviado a {user} a las {ahora.strftime('%H:%M')} GMT-4")
             except discord.Forbidden:
-                self.bot.logger.warning(f"No se pudo enviar DM a {user_id} (DMs cerrados)")
+                self.bot.logger.warning(
+                    f"No se pudo enviar DM a {user_id} (DMs cerrados)")
             except Exception as e:
                 self.bot.logger.error(f"Error enviando DM a {user_id}: {e}")
 
