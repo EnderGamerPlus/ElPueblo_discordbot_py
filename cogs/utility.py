@@ -48,7 +48,7 @@ class Utility(commands.Cog, name="utility"):
             if self.ultimo_reclamo != clave:
                 self.ultimo_reclamo = clave
                 await canal.send(
-                    f"Reclamos reiniciados\na <@&{ROL_ID}>\n{GIF_URL}"
+                    f"Reclamos reiniciados\n<@&{ROL_ID}>\n{GIF_URL}"
                 )
                 self.bot.logger.info(
                     f"Mensaje de reclamos enviado a las {ahora.strftime('%H:%M')} GMT-4")
@@ -56,7 +56,7 @@ class Utility(commands.Cog, name="utility"):
 
         # ── Rolls cada hora ─────────────────────────────────────────
         await canal.send(
-            f"1a <@&{ROL_ID}>\n{GIF_URL}"
+            f"<@&{ROL_ID}>\n{GIF_URL}"
         )
         self.bot.logger.info(
             f"Mensaje de rolls enviado a las {ahora.strftime('%H:%M')} GMT-4")
