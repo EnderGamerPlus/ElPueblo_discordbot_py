@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timezone, timedelta
 
-ROLES_PERMITIDOS = [
-    1161138418860965949,
+USUARIOS_DM = [
+    473316504239210507,
+    1006400692551958670,
 ]
 
-CANAL_ID = 1526037172203814972
-ROL_ID = 1467236589192347668
 GIF_URL = "https://klipy.com/gifs/1a-lex-luthor"
 GMT_MINUS_4 = timezone(timedelta(hours=-4))
 
@@ -20,10 +19,6 @@ class Utility(commands.Cog, name="utility"):
     def cog_unload(self):
         self.scheduler.cancel()
 
-    def tiene_permiso(self, member: discord.Member) -> bool:
-        roles_usuario = [role.id for role in member.roles]
-        return any(rol in roles_usuario for rol in ROLES_PERMITIDOS)
-
     @tasks.loop(minutes=1)
     async def scheduler(self):
         ahora = datetime.now(GMT_MINUS_4)
@@ -31,17 +26,15 @@ class Utility(commands.Cog, name="utility"):
         if ahora.minute != 30:
             return
 
-        canal = self.bot.get_channel(CANAL_ID)
-        if not canal:
-            return
-
-        # ── Rolls cada hora ─────────────────────────────────────────
-        await canal.send(
-            f"<@&{ROL_ID}>\n{GIF_URL}",
-            allowed_mentions=discord.AllowedMentions(roles=True)
-        )
-        self.bot.logger.info(
-            f"Rolls enviado a las {ahora.strftime('%H:%M')} GMT-4")
+        for user_id in USUARIOS_DM:
+            try:
+                user = await self.bot.fetch_user(user_id)
+                await user.send(f"1a\n{GIF_URL}")
+                self.bot.logger.info(f"DM enviado a {user} a las {ahora.strftime('%H:%M')} GMT-4")
+            except discord.Forbidden:
+                self.bot.logger.warning(f"No se pudo enviar DM a {user_id} (DMs cerrados)")
+            except Exception as e:
+                self.bot.logger.error(f"Error enviando DM a {user_id}: {e}")
 
     @scheduler.before_loop
     async def before_scheduler(self):
