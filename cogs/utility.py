@@ -1,7 +1,6 @@
 import discord
 import asyncio
-from discord.ext import commands
-from discord.ext import tasks
+from discord.ext import commands, tasks
 from datetime import datetime, timezone, timedelta
 
 ROLES_PERMITIDOS = [
@@ -31,43 +30,40 @@ class Utility(commands.Cog, name="utility"):
     async def scheduler(self):
         ahora = datetime.now(GMT_MINUS_4)
 
-        # Solo actuar cuando el minuto sea :30
         if ahora.minute != 30:
             return
 
         canal = self.bot.get_channel(CANAL_ID)
         if not canal:
+            self.bot.logger.warning("No se encontró el canal de anuncios")
             return
 
         hora = ahora.hour
 
-        # ── Reclamos cada 3h (horas: 0, 3, 6, 9, 12, 15, 18, 21) ──
+        # ── Reclamos cada 3h ────────────────────────────────────────
         if hora % 3 == 0:
-            # Evitar mandar dos veces en el mismo :30
             clave = f"{ahora.date()}-{hora}"
             if self.ultimo_reclamo != clave:
                 self.ultimo_reclamo = clave
                 await canal.send(
-                    f"Reclamos reiniciados\na <@&{ROL_ID}>\n{GIF_URL}"
+                    f"Reclamos reiniciados\n<@&{ROL_ID}>\n{GIF_URL}",
+                    allowed_mentions=discord.AllowedMentions(roles=True)
                 )
                 self.bot.logger.info(
-                    f"Mensaje de reclamos enviado a las {ahora.strftime('%H:%M')} GMT-4")
+                    f"Reclamos enviado a las {ahora.strftime('%H:%M')} GMT-4")
             return
 
         # ── Rolls cada hora ─────────────────────────────────────────
         await canal.send(
-            f"1a <@&{ROL_ID}>\n{GIF_URL}"
+            f"<@&{ROL_ID}>\n{GIF_URL}",
+            allowed_mentions=discord.AllowedMentions(roles=True)
         )
         self.bot.logger.info(
-            f"Mensaje de rolls enviado a las {ahora.strftime('%H:%M')} GMT-4")
+            f"Rolls enviado a las {ahora.strftime('%H:%M')} GMT-4")
 
     @scheduler.before_loop
     async def before_scheduler(self):
         await self.bot.wait_until_ready()
-
-    def tiene_permiso(self, member: discord.Member) -> bool:
-        roles_usuario = [role.id for role in member.roles]
-        return any(rol in roles_usuario for rol in ROLES_PERMITIDOS)
 
 
 async def setup(bot) -> None:
