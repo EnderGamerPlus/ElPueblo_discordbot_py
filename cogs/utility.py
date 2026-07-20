@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 USUARIOS_DM = [
     473316504239210507,
     1006400692551958670,
+    410909681608032266,
 ]
 
 GIF_URL = "https://klipy.com/gifs/1a-lex-luthor"
