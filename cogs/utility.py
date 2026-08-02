@@ -3,8 +3,6 @@ from discord.ext import commands, tasks
 from datetime import datetime, timezone, timedelta
 
 USUARIOS_DM = [
-    473316504239210507,
-    1006400692551958670,
     975492670543765584,
 ]
 
