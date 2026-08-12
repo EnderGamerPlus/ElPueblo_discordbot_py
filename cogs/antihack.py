@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from datetime import datetime, timedelta, timezone
 
 
 class AntiHack(commands.Cog, name="antihack"):
@@ -8,37 +9,83 @@ class AntiHack(commands.Cog, name="antihack"):
         self.honeypot_id = int(bot.config.get("HONEYPOT_CHANNEL_ID", 0))
         self.log_id = int(bot.config.get("LOG_CHANNEL_ID", 0))
 
-    async def banear(self, member: discord.Member, message: discord.Message, razon: str):
+    # ═══════════════════════════════════════════════════════════════
+    # ⬇️ BLOQUE EXTRA: Borrado de mensajes recientes (últimas 24h) ⬇️
+    # ═══════════════════════════════════════════════════════════════
+    # Esto es independiente del kick. Recorre TODOS los canales de
+    # texto del servidor y borra los mensajes del usuario enviados
+    # en las últimas 24 horas.
+    #
+    # NOTAS IMPORTANTES:
+    # - El bot necesita el permiso "Gestionar mensajes" en cada canal.
+    # - Discord solo permite bulk-delete (borrado masivo) de mensajes
+    #   con menos de 14 días de antigüedad, así que 24h no da problema.
+    # - Esto puede tardar unos segundos si el server tiene muchos
+    #   canales, porque hay que revisar canal por canal.
+    # - Si quieres desactivar esta parte, simplemente no la llames
+    #   desde expulsar() más abajo.
+    async def borrar_mensajes_recientes(self, member: discord.Member, guild: discord.Guild, horas: int = 24):
+        limite = datetime.now(timezone.utc) - timedelta(hours=horas)
+        total_borrados = 0
+
+        for canal in guild.text_channels:
+            # Verificar que el bot tenga permiso de borrar en ese canal
+            permisos = canal.permissions_for(guild.me)
+            if not permisos.manage_messages or not permisos.read_message_history:
+                continue
+
+            try:
+                borrados = await canal.purge(
+                    after=limite,
+                    check=lambda m: m.author.id == member.id,
+                    bulk=True,
+                    reason=f"Limpieza automática - cuenta comprometida ({member.id})"
+                )
+                total_borrados += len(borrados)
+            except discord.Forbidden:
+                continue
+            except discord.HTTPException:
+                continue
+
+        self.bot.logger.info(
+            f"Limpieza: {total_borrados} mensajes borrados de {member} en {guild.name}"
+        )
+        return total_borrados
+    # ═══════════════════════════════════════════════════════════════
+    # ⬆️ FIN DEL BLOQUE EXTRA ⬆️
+    # ═══════════════════════════════════════════════════════════════
+
+    async def expulsar(self, member: discord.Member, message: discord.Message, razon: str):
         # 1. DM
         try:
             await member.send(
-                f"⚠️ **Has sido baneado automáticamente de {message.guild.name}**\n\n"
+                f"⚠️ **Has sido expulsado automáticamente de {message.guild.name}**\n\n"
                 f"**Motivo:** {razon}\n\n"
                 f"Si tu cuenta fue hackeada:\n"
                 f"• Cambia tu contraseña de Discord\n"
                 f"• Activa el 2FA en Ajustes → Mi cuenta\n"
                 f"• Ve a Ajustes → Apps autorizadas y revoca todo lo sospechoso\n\n"
-                f"Contacta a un administrador para apelar el ban."
+                f"Puedes volver a unirte al servidor cuando quieras. Contacta a un administrador si crees que fue un error."
             )
         except discord.Forbidden:
             pass
 
-        # 2. Ban
+        # 1.5 Borrar mensajes recientes (llamada al bloque de arriba)
+        await self.borrar_mensajes_recientes(member, message.guild, horas=24)
+
+        # 2. Kick
         try:
-            await member.ban(
-                reason=razon,
-                delete_message_seconds=86400
-            )
+            await member.kick(reason=razon)
         except discord.Forbidden:
-            self.bot.logger.warning(f"Sin permisos para banear a {member}")
+            self.bot.logger.warning(f"Sin permisos para expulsar a {member}")
             return
 
         # 3. Log
         log_channel = message.guild.get_channel(self.log_id)
         if log_channel:
             embed = discord.Embed(
-                title="🔨 Ban automático — Cuenta comprometida",
-                color=discord.Color.red()
+                title="👢 Expulsión automática — Cuenta comprometida",
+                color=discord.Color.orange()
             )
             embed.add_field(
                 name="Usuario", value=f"{member.mention} (`{member.id}`)", inline=False)
@@ -53,7 +100,7 @@ class AntiHack(commands.Cog, name="antihack"):
                 )
             await log_channel.send(embed=embed)
 
-        self.bot.logger.info(f"Baneado: {member} | Motivo: {razon}")
+        self.bot.logger.info(f"Expulsado: {member} | Motivo: {razon}")
 
     @commands.hybrid_command(
         name="honeypotmsg",
@@ -65,10 +112,10 @@ class AntiHack(commands.Cog, name="antihack"):
             title="⚠️ CANAL DE SEGURIDAD — NO ESCRIBAS AQUÍ",
             description=(
                 "Este canal está monitoreado por un sistema automático de detección de cuentas comprometidas.\n\n"
-                "**Cualquier mensaje enviado aquí resultará en un ban automático e inmediato.**\n\n"
+                "**Cualquier mensaje enviado aquí resultará en una expulsión automática e inmediata.**\n\n"
                 "Este sistema existe para proteger el servidor de cuentas hackeadas que envían spam malicioso. "
                 "Si ves este canal, simplemente ignóralo.\n\n"
-                "Si fuiste baneado por error, contacta a un administrador."
+                "Si fuiste expulsado por error, contacta a un administrador."
             ),
             color=discord.Color.yellow()
         )
@@ -93,7 +140,7 @@ class AntiHack(commands.Cog, name="antihack"):
             return
 
         # ── DETECCIÓN: Cualquier mensaje en el canal honeypot ───────
-        await self.banear(member, message, "Posible cuenta comprometida")
+        await self.expulsar(member, message, "Posible cuenta comprometida")
 
 
 async def setup(bot) -> None:
