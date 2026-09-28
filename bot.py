@@ -308,6 +308,13 @@ bot = DiscordBot()
 
 async def main():
     await run_webserver()
-    await bot.start(os.getenv("TOKEN"))
+    try:
+        await bot.start(os.getenv("TOKEN"))
+    except discord.HTTPException as e:
+        if e.status == 429:
+            print("Bloqueado por rate limit (429). Esperando 15 min antes de salir...")
+            await asyncio.sleep(900)  # 15 minutos
+            sys.exit(1)               # Render reinicia el servicio despues de esperar
+        raise
 
 asyncio.run(main())
